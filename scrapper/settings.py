@@ -150,6 +150,9 @@ TWITTER_PASSWORD = os.getenv('TWITTER_PASSWORD')
 
 # Reddit...
 
+# Selenium
+CHROME_BINARY = BASE_DIR / 'chrome/chrome'
+CHROME_DRIVER = BASE_DIR / 'chrome/chromedriver'
 
 # Logging
 LOGGING = {

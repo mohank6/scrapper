@@ -134,3 +134,6 @@ test-script
 # temporary files/folders
 temp.*
 temp/
+
+# chrome and driver
+chrome/
