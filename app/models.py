@@ -7,6 +7,9 @@ class BaseModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        abstract = True
+
 
 class TwitterData(BaseModel):
     NEWS = 'news'
@@ -21,6 +24,8 @@ class TwitterData(BaseModel):
     username = models.CharField(max_length=255)
     text = models.TextField()
     url = models.URLField(max_length=255)
+    post_date = models.DateTimeField()
+    is_summarized = models.BooleanField(default=False)
     summary = models.TextField(null=True, blank=True)
     flag = models.CharField(max_length=255, choices=FLAG_CHOICES, null=True, blank=True)
 

@@ -37,3 +37,16 @@ su:
 # create virtual environment	
 venv:
 	@virtualenv .venv
+
+# download chrome and chrome driver
+.PHONY: chrome
+chrome:
+	wget https://storage.googleapis.com/chrome-for-testing-public/123.0.6312.122/linux64/chrome-linux64.zip
+	unzip chrome-linux64.zip -d chrome-test/
+	rm chrome-linux64.zip
+
+.PHONY: chrome-driver
+chrome-driver:
+	wget https://storage.googleapis.com/chrome-for-testing-public/123.0.6312.122/linux64/chromedriver-linux64.zip
+	unzip chromedriver-linux64.zip -d chrome-test/
+	rm chromedriver-linux64.zip

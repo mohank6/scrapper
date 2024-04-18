@@ -45,6 +45,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'app',
+    'rest_framework',
+    'django_extensions',
 ]
 
 MIDDLEWARE = [
@@ -153,6 +155,9 @@ TWITTER_PASSWORD = os.getenv('TWITTER_PASSWORD')
 # Selenium
 CHROME_BINARY = BASE_DIR / 'chrome/chrome'
 CHROME_DRIVER = BASE_DIR / 'chrome/chromedriver'
+
+# Gemini
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
 # Logging
 LOGGING = {

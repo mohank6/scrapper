@@ -137,3 +137,9 @@ temp/
 
 # chrome and driver
 chrome/
+
+# cookies
+cookies/
+
+# page_source
+page_source/
