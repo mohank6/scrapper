@@ -143,3 +143,6 @@ cookies/
 
 # page_source
 page_source/
+
+# errors
+error/

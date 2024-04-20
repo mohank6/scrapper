@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from app.models import TwitterData
+from app.models import TwitterData, RedditData
 from django.core.exceptions import ValidationError
 
 
@@ -18,6 +18,21 @@ class TwitterDataSerilizer(serializers.ModelSerializer):
         extra_kwargs = {'id': {'read_only': True}}
 
 
+class RedditDataSerilizer(serializers.ModelSerializer):
+
+    def validate(self, attrs):
+        post_id = attrs.get('post_id')
+        reddit_data = RedditData.objects.filter(post_id=post_id).first()
+        if reddit_data:
+            raise ValidationError('Tweet already exists')
+        return super().validate(attrs)
+
+    class Meta:
+        model = RedditData
+        fields = ['id', 'post_id', 'username', 'text', 'url', 'post_date', 'summary', 'flag']
+        extra_kwargs = {'id': {'read_only': True}}
+
+
 class GeminiDataSerilizer(serializers.Serializer):
     text = serializers.CharField()
     flag = serializers.CharField()
@@ -25,7 +40,6 @@ class GeminiDataSerilizer(serializers.Serializer):
 
     def validate(self, attrs):
         flag = attrs.get('flag').lower()
-        print(flag)
         if flag not in self.FLAG_CHOICES:
             raise ValidationError('Invalid flag')
         return super().validate(attrs)

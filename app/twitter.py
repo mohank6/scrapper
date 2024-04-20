@@ -6,7 +6,7 @@ import pickle
 import logging
 from time import sleep
 from django.conf import settings
-from app.gemini import GeminiService
+from fake_useragent import UserAgent
 
 from selectolax.parser import HTMLParser
 
@@ -21,8 +21,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 from selenium.common import TimeoutException
 
-from app.serializers import TwitterDataSerilizer, GeminiDataSerilizer
-from app.service import TwitterData
+from app.serializers import TwitterDataSerilizer
 
 log = logging.getLogger('app')
 
@@ -34,8 +33,8 @@ class TwitterScrapper():
         self._login_url = 'https://twitter.com/i/flow/_login'
         self.base_url = 'https://twitter.com/'
         self.cookies_folder = 'app/cookies/'
-        self.page_source_folder = 'app/page_source/'
-        self.cookies_path = 'app/cookies/twitter_cookies.pkl'
+        self.error_folder = 'app/error/'
+        self.cookies_path = 'app/cookies/twitter_cookies.json'
         self.is_logged_in = False
         self.WAIT = 2
         self.browser = self._get_browser(headless)
@@ -57,37 +56,54 @@ class TwitterScrapper():
             option.use_chromium = True
             option.binary_location = str(settings.CHROME_BINARY)
             option.add_experimental_option("excludeSwitches", ["enable-logging"])
-            option.add_argument("--disable-extensions")
-            option.add_argument("start-maximized")
-            option.add_argument("--disable-inforbars")
             option.add_argument("--no-sandbox")
-            option.add_argument("dom.disable_beforeunload=true")
             option.add_argument("--log-level=3")
+            option.add_argument("--disable-infobars")
+            option.add_argument("--disable-extensions")
+            option.add_argument("--disable-notifications")
+            option.add_argument("dom.disable_beforeunload=true")
+            option.add_argument("--user-agent={}".format(UserAgent().random))
+            option.add_argument("start-maximized")
             if headless:
                 option.add_argument("headless")
                 option.add_argument("--disable-gpu")
             return webdriver.Chrome(service=ser, options=option)
         except Exception as e:
-            log.error(f'Error setting up driver: {str(e)}')
+            log.error(f'Error setting up driver: {repr(e)}')
             return None
 
-    def _save_page_source(self, filename):
-        if not os.path.exists(self.page_source_folder):
-            os.makedirs(self.page_source_folder)
-        filename = filename + '-' + str(datetime.datetime.now()) + '.html'
-        with open(os.path.join(self.page_source_folder, filename), 'w') as fp:
+    def _save_page(self, filename):
+        if not os.path.exists(self.error_folder):
+            os.makedirs(self.error_folder)
+        now = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        base_path = os.path.join(self.error_folder, now)
+        if not os.path.exists(base_path):
+            os.makedirs(base_path)
+        path = os.path.join(base_path, filename)
+        with open(path + '.html', 'w') as fp:
             fp.write(self.browser.page_source)
+        self.browser.save_screenshot(path + '.png')
 
     def _login(self):
         max_retries = 3
         retries = 0
         while max_retries > retries:
             try:
-                self.browser.get(self.lpgin_url)
+                self.browser.get(self._login_url)
 
                 username_xpath = '//input[@autocomplete="username"]'
                 password_xpath = '//input[@autocomplete="current-password"]'
+                error_occured_xpath = '//div[@data-testid="confirmationSheetConfirm"]'
+                login_button_xpath = '//a[@data-testid="loginButton"]'
                 # username_xpath = '//input[@data-testid="ocfEnterTextTextInput"]'
+
+                try:
+                    confirmation = WebDriverWait(self.browser, 5).until(EC.presence_of_element_located((By.XPATH, error_occured_xpath)))
+                    confirmation.click()
+                    login = WebDriverWait(self.browser, 5).until(EC.presence_of_element_located((By.XPATH, login_button_xpath)))
+                    login.click()
+                except:
+                    pass
 
                 username = WebDriverWait(self.browser, 10).until(EC.presence_of_element_located((By.XPATH, username_xpath)))
                 username.send_keys(settings.TWITTER_USERNAME)
@@ -107,10 +123,11 @@ class TwitterScrapper():
                     self._save_cookies()
                 break
             except TimeoutException as e:
-                log.debug(f'Timed out: {str(e)}')
+                self._save_page(f'{repr(e)}-{retries}')
+                log.debug(f'[{retries}] Timed out: {repr(e)}')
             except Exception as e:
-                self._save_page_source('_login-exception')
-                log.debug(f'_login failed: {str(e)}')
+                self._save_page(f'{repr(e)}-{retries}')
+                log.debug(f'[{retries}] Login failed: {repr(e)}')
             self.browser.refresh()
             sleep(random.uniform(self.WAIT + 3, self.WAIT + 5))
             retries += 1
@@ -119,10 +136,10 @@ class TwitterScrapper():
         if not os.path.exists(self.cookies_folder):
             os.makedirs(self.cookies_folder)
 
-        # with open(self.cookies_path, 'w') as fp:
-        #     json.dump(self.browser.get_cookies(), fp)
-        #     log.debug('Cookies saved.')
-        pickle.dump(self.browser.get_cookies(), open(self.cookies_path, "wb"))
+        with open(self.cookies_path, 'w') as fp:
+            json.dump(self.browser.get_cookies(), fp)
+            log.debug('Cookies saved.')
+        # pickle.dump(self.browser.get_cookies(), open(self.cookies_path, "wb"))
 
     def _load_cookies(self):
         if not self._check_for_cookies():
@@ -131,79 +148,83 @@ class TwitterScrapper():
         log.debug('Cookies found')
         try:
             self.browser.get(self.base_url)
-            cookies = pickle.load(open(self.cookies_path, "rb"))
-            for cookie in cookies:
-                self.browser.add_cookie(cookie)
+            # cookies = pickle.load(open(self.cookies_path, "rb"))
+            with open(self.cookies_path, 'r') as fp:
+                cookies = json.load(fp)
+                for cookie in cookies:
+                    self.browser.add_cookie(cookie)
             log.debug('Cookies loaded')
         except Exception as e:
-            log.debug(f'Error loading cookies: {str(e)}')
-        sleep(random.uniform(self.WAIT, self.WAIT + 4))
+            log.debug(f'Error loading cookies: {repr(e)}')
 
     def _check_for_cookies(self):
         return os.path.exists(self.cookies_path)
 
     def _check_status(self):
         home_xpath = '//a[@data-testid="AppTabBar_Home_Link"]'
+        account_switcher_xpath = '//a[@data-testid="SideNav_AccountSwitcher_Button"]'
         self.browser.get(self.home_url)
         sleep(random.uniform(self.WAIT, self.WAIT + 4))
         try:
             WebDriverWait(self.browser, 10).until(EC.presence_of_element_located((By.XPATH, home_xpath)))
+            WebDriverWait(self.browser, 10).until(EC.presence_of_element_located((By.XPATH, account_switcher_xpath)))
             home_page_loaded = True
         except:
             home_page_loaded = False
 
-        if self.browser.current_url == self.home_url and home_page_loaded:
-            self.is_logged_in = True
-            log.debug(f'_login successfull')
-            return
-        log.debug(f'_login failed')
-
-    def authenticate(self):
-        if not self.browser:
-            log.debug('Driver not set up')
+        if not self.browser.current_url == self.home_url and home_page_loaded:
+            log.debug(f'Login failed')
             return None
 
-        if not self._check_for_cookies():
-            log.debug('Cookies not found')
-            self._login()
-        else:
-            self._load_cookies()
+        self.is_logged_in = True
+        log.debug(f'Login successfull')
 
-        self._check_status()
-        if not self.is_logged_in:
-            self._login()
-        return None
+    def authenticate(self):
+        try:
+            if not self.browser:
+                log.debug('Driver not set up')
+                return None
+            if not self._check_for_cookies():
+                self._login()
+                return None
+            self._load_cookies()
+            self._check_status()
+            if not self.is_logged_in:
+                self._login()
+
+        except Exception as e:
+            log.debug(f'Error occured: {repr(e)}')
 
     def _get_tweet_data(self, card):
         try:
             user = card.find_element(By.XPATH, './/span').text
         except Exception as e:
-            log.error(f'Parsing error: {str(e)}')
+            log.error(f'Parsing error: {repr(e)}')
             return
         try:
             handle = card.find_element(By.XPATH, './/span[contains(text(), "@")]').text
         except Exception as e:
-            log.error(f'Parsing error: {str(e)}')
+            log.error(f'Parsing error: {repr(e)}')
             return
         try:
             postdate = card.find_element(By.XPATH, './/time').get_attribute('datetime')
         except Exception as e:
-            log.error(f'Parsing error: {str(e)}')
+            log.error(f'Parsing error: {repr(e)}')
             return
         try:
             text = card.find_element(By.XPATH, './/div[@data-testid="tweetText"]').text
         except Exception as e:
-            log.error(f'Parsing error: {str(e)}')
+            log.error(f'Parsing error: {repr(e)}')
             return
         try:
             url = card.find_element(By.XPATH, './/a[contains(@href, "/status/")]').get_attribute('href')
         except Exception as e:
-            log.error(f'Parsing error: {str(e)}')
+            log.error(f'Parsing error: {repr(e)}')
             return
         try:
             tweet_id = url.split('/')[-1]
         except Exception as e:
-            log.error(f'Parsing error: {str(e)}')
+            log.error(f'Parsing error: {repr(e)}')
             return
         return {'username': handle, 'user': user, 'post_date': postdate, 'text': text, 'url': url, 'tweet_id': tweet_id}
 
@@ -244,9 +265,8 @@ class TwitterScrapper():
                     if scrolls > 2:
                         scrolling = False
                     scrolls += 1
-                breakpoint()
             except Exception as e:
-                log.debug(f'Could not find tweets: {str(e)}')
+                log.debug(f'Could not find tweets: {repr(e)}')
                 retries += 1
                 continue
 
@@ -255,33 +275,4 @@ class TwitterScrapper():
                 if not serializer.is_valid():
                     continue
                 serializer.save()
-                log.debug('Tweet saved')
             break
-
-
-class Summarizer():
-
-    @classmethod
-    def _get_summarized_data(cls, tweet_data):
-        gemini = GeminiService()
-        data = gemini.generate_completion(tweet_data.text)
-        if not data:
-            log.debug('No data')
-            return
-        gemini_serializer = GeminiDataSerilizer(data=data)
-        if not gemini_serializer.is_valid():
-            log.debug(gemini_serializer.errors)
-            return
-        tweet_data.summary = gemini_serializer.validated_data.get('text')
-        tweet_data.flag = gemini_serializer.validated_data.get('flag')
-        tweet_data.is_summarized = True
-        tweet_data.save()
-        log.debug('Tweet updated')
-
-    @classmethod
-    def summarize(cls):
-        tweets = TwitterData.get_not_summarized_tweets()
-        for tweet in tweets:
-            print(tweet)
-            cls._get_summarized_data(tweet)
-        log.debug('Tweets summarized')

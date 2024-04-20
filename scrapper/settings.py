@@ -159,6 +159,13 @@ CHROME_DRIVER = BASE_DIR / 'chrome/chromedriver'
 # Gemini
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
+# Reddit
+REDDIT_CLIENT_ID = os.getenv('REDDIT_CLIENT_ID')
+REDDIT_CLIENT_SECRET = os.getenv('REDDIT_CLIENT_SECRET')
+REDDIT_USERAGENT = os.getenv('REDDIT_USERAGENT')
+REDDIT_USERNAME = os.getenv('REDDIT_USERNAME')
+REDDIT_PASSWORD = os.getenv('REDDIT_PASSWORD')
+
 # Logging
 LOGGING = {
     'version': 1,

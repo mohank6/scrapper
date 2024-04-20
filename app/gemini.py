@@ -1,6 +1,8 @@
 import json
 from django.conf import settings
 import google.generativeai as genai
+from google.generativeai.types.generation_types import StopCandidateException
+from google.api_core.exceptions import ResourceExhausted
 import logging
 
 log = logging.getLogger('app')
@@ -28,18 +30,9 @@ class GeminiService:
                 "threshold": "BLOCK_MEDIUM_AND_ABOVE",
             },
         ]
-        # SYSTEM_PROMPT = """
-        #                 Summarize the given text to create a concise summary suitable for a LinkedIn post. \
-        #                 Additionally, categorize the content into one of the following flags: 'news', 'information', or 'other'.\
-        #                 Return the result in JSON format with the following structure:
-        #                     {
-        #                         'text': < summary > ,
-        #                         'flag': < flag >
-        #                     }
-        #                 """
-        character_limit = 280
+        word_limit = 150
         SYSTEM_PROMPT = f"""
-**Task:** Summarize the given text for a LinkedIn audience and categorize its content.
+**Task:** Summarize the given text for a LinkedIn audience in machine learning and artificial intelligence sector and categorize its content.
 
 **Input:**
 
@@ -49,7 +42,7 @@ class GeminiService:
 
 A JSON object with the following keys:
 
-* `text`: (string) A concise summary suitable for a LinkedIn post, limited to a character count of {character_limit} (e.g., 280 characters).
+* `text`: (string) A concise summary suitable for a LinkedIn post, limited to a word count of {word_limit} (e.g., 150 words).
 * `flag`: (string) Category of the content, one of the following:
     * `news`: If the content reports on current events.
     * `information`: If the content provides general knowledge or educational value.
@@ -57,10 +50,14 @@ A JSON object with the following keys:
 
 **Additional Considerations:**
 
+* Add atleast 3 to 5 relevant tags at end of each summary (e.g., #AritificialIntelligence #MachineLearning #Google #OpenAI)
 * Maintain a neutral and objective tone in the summary. 
 * Avoid including personal opinions or biases.
 * Focus on the key takeaways of the original text.
 * Use clear and concise language suitable for a broad LinkedIn audience.
+
+**IMPORTANT**
+Respond in json format.
 """
         self.model = genai.GenerativeModel(
             model_name="gemini-1.5-pro-latest",
@@ -70,13 +67,19 @@ A JSON object with the following keys:
         )
 
     def generate_completion(self, message):
-        conversation = self.model.start_chat()
         try:
+            conversation = self.model.start_chat()
             conversation.send_message(message)
-            log.debug(f'Gemini request sucessfull')
             response = conversation.last.text
             cleaned_data_string = response.replace('```json', '').replace('```', '').strip()
-            return json.loads(cleaned_data_string)
+            data = json.loads(cleaned_data_string)
+            return data
+        except StopCandidateException as e:
+            log.error(f'Response error: {str(e)}')
+            return None
+        except ResourceExhausted as e:
+            log.error(f'Resource exhausted: {str(e)}')
+            return None
         except Exception as e:
-            log.debug(f'Error Gemini: {str(e)}')
+            log.error(f'Error Gemini: {str(e)}')
             return None

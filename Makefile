@@ -42,11 +42,14 @@ venv:
 .PHONY: chrome
 chrome:
 	wget https://storage.googleapis.com/chrome-for-testing-public/123.0.6312.122/linux64/chrome-linux64.zip
-	unzip chrome-linux64.zip -d chrome-test/
+	mkdir -p chrome
+	unzip chrome-linux64.zip -d chrome/temp
+	mv chrome/temp/*/* chrome/
 	rm chrome-linux64.zip
+	rm -r chrome/temp
 
 .PHONY: chrome-driver
 chrome-driver:
 	wget https://storage.googleapis.com/chrome-for-testing-public/123.0.6312.122/linux64/chromedriver-linux64.zip
-	unzip chromedriver-linux64.zip -d chrome-test/
+	unzip -j chromedriver-linux64.zip -d chrome/
 	rm chromedriver-linux64.zip
