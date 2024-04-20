@@ -26,22 +26,28 @@ class Summarizer():
         data.save()
 
     @classmethod
-    def summarize_tweets(cls):
-        tweets = TwitterData.get_not_summarized_tweets()
+    def summarize_tweets(cls, queryset=None):
+        tweets = queryset
+        if not queryset:
+            tweets = TwitterData.get_not_summarized_tweets()
         for tweet in tweets:
             cls._get_summarized_data(tweet)
         log.debug('Tweets summarized')
 
     @classmethod
-    def summarize_reddit(cls):
-        posts = RedditData.get_not_summarized_posts()
+    def summarize_reddit(cls, queryset=None):
+        posts = queryset
+        if not queryset:
+            posts = RedditData.get_not_summarized_posts()
         for post in posts:
             cls._get_summarized_data(post)
         log.debug('Posts summarized')
 
     @classmethod
-    def summarize_transcript(cls):
-        transcripts = YoutubeData.get_not_summarized_transcripts()
+    def summarize_transcript(cls, queryset=None):
+        transcripts = queryset
+        if not queryset:
+            transcripts = YoutubeData.get_not_summarized_transcripts()
         for transcript in transcripts:
             cls._get_summarized_data(transcript)
         log.debug('Transcirpts summarized')
