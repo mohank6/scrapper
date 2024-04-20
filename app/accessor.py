@@ -1,4 +1,4 @@
-from app.models import TwitterData, RedditData
+from app.models import TwitterData, RedditData, YoutubeData
 
 
 class TwitterDataAccessor():
@@ -13,3 +13,10 @@ class RedditDataAccessor():
     @staticmethod
     def filter_posts(**kwargs):
         return RedditData.objects.filter(**kwargs)
+
+
+class YoutubeDataAccessor():
+
+    @staticmethod
+    def filter_transcripts(**kwargs):
+        return YoutubeData.objects.filter(**kwargs)

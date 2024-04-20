@@ -2,7 +2,7 @@ from app.gemini import GeminiService
 from app.serializers import GeminiDataSerilizer
 import logging
 
-from app.service import TwitterData, RedditData
+from app.service import TwitterData, RedditData, YoutubeData
 
 log = logging.getLogger('app')
 
@@ -38,3 +38,10 @@ class Summarizer():
         for post in posts:
             cls._get_summarized_data(post)
         log.debug('Posts summarized')
+
+    @classmethod
+    def summarize_transcript(cls):
+        transcripts = YoutubeData.get_not_summarized_transcripts()
+        for transcript in transcripts:
+            cls._get_summarized_data(transcript)
+        log.debug('Transcirpts summarized')

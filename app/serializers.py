@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from app.models import TwitterData, RedditData
+from app.models import TwitterData, RedditData, YoutubeData
 from django.core.exceptions import ValidationError
 
 
@@ -30,6 +30,21 @@ class RedditDataSerilizer(serializers.ModelSerializer):
     class Meta:
         model = RedditData
         fields = ['id', 'post_id', 'username', 'text', 'url', 'post_date', 'summary', 'flag']
+        extra_kwargs = {'id': {'read_only': True}}
+
+
+class YoutubeDataSerilizer(serializers.ModelSerializer):
+
+    def validate(self, attrs):
+        video_id = attrs.get('video_id')
+        video_data = YoutubeData.objects.filter(video_id=video_id).first()
+        if video_data:
+            raise ValidationError('Video already exists')
+        return super().validate(attrs)
+
+    class Meta:
+        model = YoutubeData
+        fields = ['id', 'video_id', 'text', 'url', 'summary', 'flag']
         extra_kwargs = {'id': {'read_only': True}}
 
 

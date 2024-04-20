@@ -1,4 +1,4 @@
-from app.accessor import TwitterDataAccessor, RedditDataAccessor
+from app.accessor import TwitterDataAccessor, RedditDataAccessor, YoutubeDataAccessor
 
 
 class TwitterData:
@@ -13,3 +13,10 @@ class RedditData:
     @staticmethod
     def get_not_summarized_posts():
         return RedditDataAccessor.filter_posts(is_summarized=False)
+
+
+class YoutubeData:
+
+    @staticmethod
+    def get_not_summarized_transcripts():
+        return YoutubeDataAccessor.filter_transcripts(is_summarized=False)

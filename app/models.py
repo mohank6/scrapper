@@ -67,7 +67,6 @@ class YoutubeData(BaseModel):
     video_id = models.CharField(max_length=255)
     text = models.TextField()
     url = models.URLField(max_length=255)
-    post_date = models.DateTimeField()
     is_summarized = models.BooleanField(default=False)
     summary = models.TextField(null=True, blank=True)
     flag = models.CharField(max_length=255, choices=FLAG_CHOICES, null=True, blank=True)
